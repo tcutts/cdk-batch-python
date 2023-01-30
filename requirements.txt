@@ -1,2 +1,4 @@
 aws-cdk-lib==2.62.1
+boto3
+aws-cdk.aws-batch-alpha==2.62.1a0
 constructs>=10.0.0,<11.0.0
