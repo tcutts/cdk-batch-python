@@ -1,16 +1,44 @@
 
-# Welcome to your CDK Python project!
+# Introduction to CDK and AWS Batch
 
-This is a blank project for CDK development with Python.
+Science depends on the reproducibility of results.  This includes the reproducibility of analysis.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+Historically, a lot of researchers struggled to run each other's code; developed on an individual
+specific system, and requiring work to run elsewhere.
 
-This project is set up like a standard Python project.  The initialization
-process also creates a virtualenv within this project, stored under the `.venv`
-directory.  To create the virtualenv it assumes that there is a `python3`
+Containers help solve a lot of this problem by at least packaging an application and a lot of its
+dependencies in a single runnable module.  But that's only part of the story.  What about everything
+else you need to run a scientific analysis at scale?  Batch queues.  HPC nodes.  High performance
+networks.  Firewalls.  Centralised logging.  Fault notifications.  The list goes on...
+
+AWS of course has all of these features and more.  AWS CloudFormation allows you to describe all of
+your infrastratucture in template files, in either YAML or JSON.  However, these can be unwieldy to
+write and debug.  What if you could write code in Python, or other languages with which you are
+already familiar, and have that generate the CloudFormation template for you?  And apply sensible,
+best practice defaults so that you don't have to directly code every last detail?  That's what
+the AWS Cloud Developer Kit does.
+
+This allows you to specify your entire application; the containerised app itself, and the entire
+infrastructure to run it reproducibly, in a single code repository.
+
+This is an example of a simple research-oriented architecture, written almost entirely in Python, to illustrate the principles.
+
+![Architecture diagram](assets/architecture.svg)
+
+1. Dropping files in the `Input Bucket` triggers the `Bucket Arrival` lambda function
+2. The function submits a job to the `Batch Queue` which automatically spins up instance(s) to process the jobs.
+3. CDK uses docker on your machine to build and upload the container to the Amazon Elastic Container registry.  AWS Batch uses this container to process the file in the input bucket.
+1. The results of the job are then stored in  `Output Bucket`
+1. An `Event Bus` watches the AWS Batch events, and filters them for job status changes to `SUCCEEDED` or `FAILED` and sends these events to the `JobCompletion` SNS topic.
+
+# Before you start
+
+This project is set up like a standard Python project.  You need to create a virtualenv
+for this to work.
+
+To create the virtualenv it assumes that there is a `python3`
 (or `python` for Windows) executable in your path with access to the `venv`
-package. If for any reason the automatic creation of the virtualenv fails,
-you can create the virtualenv manually.
+package
 
 To manually create a virtualenv on MacOS and Linux:
 

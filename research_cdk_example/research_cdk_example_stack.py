@@ -119,7 +119,7 @@ class ResearchCdkExampleStack(Stack):
         )
 
         # Create an SNS topic for notifications
-        topic = _sns.Topic(self, "JobChangesTopic")
+        topic = _sns.Topic(self, "JobCompletionTopic")
 
         if email.value_as_string != "":
             # Subscribe to it
