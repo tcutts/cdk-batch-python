@@ -1,5 +1,5 @@
 from aws_cdk import (
-    Stack, RemovalPolicy, Duration, CfnOutput,
+    Stack, Duration, CfnOutput,
     aws_s3 as _s3,
     aws_s3_notifications as _s3n,
     aws_lambda as _lambda,
@@ -18,7 +18,7 @@ class ResearchCdkExampleStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # Create a network for everything to go in
+        # Create a VPC for everything to go in
         vpc = _ec2.Vpc(self, "ResearchVPC")
 
         # Create the roles we need
@@ -36,7 +36,6 @@ class ResearchCdkExampleStack(Stack):
                 vpc=vpc,
                 instance_role=self.instance_profile.attr_arn
             ),
-            service_role=self.create_batch_service_role(),
         )
 
         # Create a job queue connected to the Compute Environment
@@ -59,10 +58,8 @@ class ResearchCdkExampleStack(Stack):
                 ),
                 memory_limit_mib=100,
                 vcpus=1,
-                execution_role=self.execution_role,
                 job_role=self.job_role,
             ),
-            platform_capabilities=[_batch.PlatformCapabilities.EC2],
             retry_attempts=3,
             timeout=Duration.days(1) 
         )
@@ -70,13 +67,11 @@ class ResearchCdkExampleStack(Stack):
         # Create input and output buckets
         input_bucket = _s3.Bucket(
             self, "InputBucket",
-            public_read_access=False,
             encryption=_s3.BucketEncryption.S3_MANAGED
         )
 
         output_bucket = _s3.Bucket(
             self, "OutputBucket",
-            public_read_access=False,
             encryption=_s3.BucketEncryption.S3_MANAGED
         )
 
@@ -153,32 +148,12 @@ class ResearchCdkExampleStack(Stack):
         CfnOutput(self, "OutputBucketName", value=output_bucket.bucket_name)
 
     def create_roles(self):
-        # The compute environment needs an instance role with permission to
-        # create log entries
-        self.instance_role = self.create_instance_role()
-        self.instance_profile = _iam.CfnInstanceProfile(
-            self, "InstanceProfile",
-            roles=[self.instance_role.role_name]
-        )
-
-        # Create a role allowing Batch to execute tasks in ECS
-        self.execution_role = _iam.Role(
-            self, "ExecutionRole",
-            assumed_by=_iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
-            managed_policies=[
-                _iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "service-role/AmazonECSTaskExecutionRolePolicy",
-                )
-            ]
-        )
-
         # Create a role for jobs to assume as they run
         self.job_role = _iam.Role(
             self, "JobRole",
             assumed_by=_iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
         )
 
-    def create_instance_role(self) -> _iam.Role:
         instance_role = _iam.Role(self, "InstanceRole",
             assumed_by=_iam.ServicePrincipal("ec2.amazonaws.com"),
             managed_policies= [
@@ -209,24 +184,7 @@ class ResearchCdkExampleStack(Stack):
             )
         )
 
-        return instance_role
-
-    def create_batch_service_role(self) -> _iam.Role:
-        batch_service_role = _iam.Role(
-            self, "BatchServiceRole",
-            assumed_by=_iam.ServicePrincipal("batch.amazonaws.com"),
-            managed_policies= [
-                _iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "service-role/AWSBatchServiceRole"
-                )
-            ]
+        self.instance_profile = _iam.CfnInstanceProfile(
+            self, "InstanceProfile",
+            roles=[instance_role.role_name]
         )
-
-        sts_assume_statement = _iam.PolicyStatement(
-            effect=_iam.Effect.ALLOW,
-            actions=["sts:AssumeRole"],
-            resources=["*"]
-        )
-        batch_service_role.add_to_policy(sts_assume_statement)
-
-        return batch_service_role
