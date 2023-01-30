@@ -1,5 +1,5 @@
 from aws_cdk import (
-    Stack, Duration, CfnOutput,
+    Stack, Duration, CfnOutput, CfnParameter,
     aws_s3 as _s3,
     aws_s3_notifications as _s3n,
     aws_lambda as _lambda,
@@ -17,7 +17,7 @@ class ResearchCdkExampleStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-
+        
         # Create a VPC for everything to go in
         vpc = _ec2.Vpc(self, "ResearchVPC")
 
@@ -28,7 +28,6 @@ class ResearchCdkExampleStack(Stack):
         compute_environment = _batch.ComputeEnvironment(
             self, "ComputeEnvironment",
             compute_resources=_batch.ComputeResources(
-                allocation_strategy=_batch.AllocationStrategy.BEST_FIT_PROGRESSIVE,
                 instance_types=[_ec2.InstanceType("c6g")],
                 image=_ecs.EcsOptimizedImage.amazon_linux2(
                     _ecs.AmiHardwareType.ARM,
@@ -39,8 +38,7 @@ class ResearchCdkExampleStack(Stack):
         )
 
         # Create a job queue connected to the Compute Environment
-        job_queue = _batch.JobQueue(
-            self, "ResearchQueue",
+        job_queue = _batch.JobQueue(self, "ResearchQueue",
             compute_environments=[
                 _batch.JobQueueComputeEnvironment(
                     compute_environment=compute_environment,
@@ -50,8 +48,7 @@ class ResearchCdkExampleStack(Stack):
         )
 
         # Create a job definition for the word_count container
-        job_def = _batch.JobDefinition(
-            self, "WordCountJob",
+        job_def = _batch.JobDefinition(self, "WordCountJob",
             container=_batch.JobDefinitionContainer(
                 image=_ecs.ContainerImage.from_asset(
                     "job_definitions/word_count"
@@ -65,19 +62,16 @@ class ResearchCdkExampleStack(Stack):
         )
 
         # Create input and output buckets
-        input_bucket = _s3.Bucket(
-            self, "InputBucket",
+        input_bucket = _s3.Bucket(self, "InputBucket",
             encryption=_s3.BucketEncryption.S3_MANAGED
         )
 
-        output_bucket = _s3.Bucket(
-            self, "OutputBucket",
+        output_bucket = _s3.Bucket(self, "OutputBucket",
             encryption=_s3.BucketEncryption.S3_MANAGED
         )
 
         # Create the lambda function which will respond to files arriving
-        bucket_arrival_function = _lambda.Function(
-            self, "BucketArrival",
+        bucket_arrival_function = _lambda.Function(self, "BucketArrival",
             runtime=_lambda.Runtime.PYTHON_3_9,
             code=_lambda.Code.from_asset("lambda/bucket_arrival"),
             handler="bucket_arrival.handler",
@@ -118,21 +112,24 @@ class ResearchCdkExampleStack(Stack):
         input_bucket.grant_read(self.job_role)
         output_bucket.grant_write(self.job_role)
 
+        # Specify email destination as parameter
+        email = CfnParameter(self, "Notification Email",
+            description="Email adress job success/failures will be sent to",
+            allowed_pattern="\w+@(\w+\.)+(\w+)"
+        )
+
         # Create an SNS topic for notifications
-        topic = _sns.Topic(
-            self, "JobChangesTopic"
-        )
+        topic = _sns.Topic(self, "JobChangesTopic")
 
-        # Subscribe to it
-        subscription = _sns.Subscription(
-            self, "NotifyMe",
-            topic=topic, protocol=_sns.SubscriptionProtocol.EMAIL,
-            endpoint="tjrc@amazon.co.uk",
-        )
+        if email.value_as_string != "":
+            # Subscribe to it
+            _sns.Subscription(self, "NotifyMe",
+                topic=topic, protocol=_sns.SubscriptionProtocol.EMAIL,
+                endpoint=email.value_as_string,
+            )
 
-        # EventBridge between Batch and topic, looking
-        rule = _events.Rule(
-            self, "BatchEvents",
+        # EventBridge between Batch and topic, for success and failure
+        _events.Rule(self, "BatchEvents",
             event_pattern=_events.EventPattern(
                 source=["aws.batch"],
                 detail_type=["Batch Job State Change"],
@@ -149,11 +146,11 @@ class ResearchCdkExampleStack(Stack):
 
     def create_roles(self):
         # Create a role for jobs to assume as they run
-        self.job_role = _iam.Role(
-            self, "JobRole",
+        self.job_role = _iam.Role(self, "JobRole",
             assumed_by=_iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
         )
 
+        # Instance role for the EC2 instances which get created
         instance_role = _iam.Role(self, "InstanceRole",
             assumed_by=_iam.ServicePrincipal("ec2.amazonaws.com"),
             managed_policies= [
