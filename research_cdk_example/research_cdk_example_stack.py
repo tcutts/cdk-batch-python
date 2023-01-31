@@ -75,7 +75,7 @@ class ResearchCdkExampleStack(Stack):
             runtime=_lambda.Runtime.PYTHON_3_9,
             code=_lambda.Code.from_asset("lambda/bucket_arrival"),
             handler="bucket_arrival.handler",
-            # Environment variables tell the lambbda where to submit jobs to
+            # Environment variables tell the lambda where to submit jobs to
             # and place output
             environment={
                 "JOBDEF": job_def.job_definition_name,
