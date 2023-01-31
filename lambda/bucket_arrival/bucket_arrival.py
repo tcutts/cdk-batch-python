@@ -19,6 +19,8 @@ def handler(event, context):
         print(f'submitting job for file {obj_key} in bucket {bucket}\n')
         
         job = batch.submit_job(
+            # Job names can only be a maximum length and consist of a subset
+            # of characters
             jobName=re.sub(r'[^a-zA-Z0-9_-]+', '_', obj_key)[:127],
             jobQueue=os.environ['JOBQUEUE'],
             jobDefinition=os.environ['JOBDEF'],
