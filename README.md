@@ -11,9 +11,15 @@ dependencies in a single runnable module.  But that's only part of the story.  W
 else you need to run a scientific analysis at scale?  Batch queues.  HPC nodes.  High performance
 networks.  Firewalls.  Centralised logging.  Fault notifications.  The list goes on...
 
-AWS of course has all of these features and more.  AWS CloudFormation allows you to describe all of
-your infrastratucture in template files, in either YAML or JSON.  However, these can be unwieldy to
-write and debug.  What if you could write code in Python, or other languages with which you are
+AWS of course has all of these features and more, but configuring them all individually through the AWS console is laborious and error prone.
+
+AWS CloudFormation is a service allows you to describe all of
+your infrastratucture in template files, in either YAML or JSON.  The service then turns these templates into a series of API calls and executes them to created the infrastructure.
+
+However, CloudFormation templates can be unwieldy to
+write and debug, especially as your stack gets more complex and has many cross-references between resources.
+
+What if you could write code in Python, or other languages with which you are
 already familiar, and have that generate the CloudFormation template for you?  And apply sensible,
 best practice defaults so that you don't have to directly code every last detail?  That's what
 the AWS Cloud Developer Kit does.
@@ -53,7 +59,7 @@ step to activate your virtualenv.
 $ source .venv/bin/activate
 ```
 
-If you are a Windows platform, you would activate the virtualenv like this:
+If you are on a Windows platform, you would activate the virtualenv like this:
 
 ```
 % .venv\Scripts\activate.bat
@@ -63,6 +69,12 @@ Once the virtualenv is activated, you can install the required dependencies.
 
 ```
 $ pip install -r requirements.txt
+```
+
+If you have never used CDK before on your account or in the region you're about to deploy to, you need to bootstrap CDK in your account and region:
+
+```
+$ cdk bootstrap
 ```
 
 At this point you can now synthesize the CloudFormation template for this code.
