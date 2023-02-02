@@ -84,6 +84,12 @@ class ResearchCdkExampleStack(Stack):
             }
         )
 
+        # Send object creation notifications from the input bucket
+        # to the lambda function
+        input_bucket.add_object_created_notification(
+            _s3n.LambdaDestination(bucket_arrival_function),
+        )
+
         # Allow the lambda function to submit jobs
         bucket_arrival_function.role.attach_inline_policy(
             _iam.Policy(
@@ -98,12 +104,6 @@ class ResearchCdkExampleStack(Stack):
                     )
                 ]
             )
-        )
-
-        # Send object creation notifications from the input bucket
-        # to the lambda function
-        input_bucket.add_object_created_notification(
-            _s3n.LambdaDestination(bucket_arrival_function),
         )
 
         # Give the lambda and job_role the permissions they need on
