@@ -12,7 +12,6 @@ from aws_cdk import (
     aws_events_targets as _targets,
 )
 from constructs import Construct
-import platform
 
 class ResearchCdkExampleStack(Stack):
 
