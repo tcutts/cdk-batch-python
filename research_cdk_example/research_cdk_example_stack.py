@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_events_targets as _targets,
 )
 from constructs import Construct
+import platform
 
 class ResearchCdkExampleStack(Stack):
 
@@ -28,10 +29,8 @@ class ResearchCdkExampleStack(Stack):
         compute_environment = _batch.ComputeEnvironment(
             self, "ComputeEnvironment",
             compute_resources=_batch.ComputeResources(
-                instance_types=[_ec2.InstanceType("c6g")],
-                image=_ecs.EcsOptimizedImage.amazon_linux2(
-                    _ecs.AmiHardwareType.ARM,
-                ),
+                instance_types=[ _ec2.InstanceType("c6a") ],
+                image=_ecs.EcsOptimizedImage.amazon_linux2(),
                 vpc=vpc,
                 instance_role=self.instance_profile.attr_arn
             ),
