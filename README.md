@@ -37,6 +37,42 @@ This is an example of a simple research-oriented architecture, written almost en
 1. The results of the job are then stored in  `Output Bucket`
 1. An `Event Bus` watches the AWS Batch events, and filters them for job status changes to `SUCCEEDED` or `FAILED` and sends these events to the `JobCompletion` SNS topic.
 
+
+# Prerequisites
+
+1. Install [Node.js](https://nodejs.org/en/download/) 14.15.0 or later on your system
+1. Install Docker on your system
+1. Install CDKv2: ```npm install -g aws-cdk```
+1. Install Python 3.7 or higher on your system, including `pip` and `virtualenv`
+1. Recommended:  Install the [AWS CLI](https://aws.amazon.com/cli/) on your system
+1. Clone this repository
+1. Navigate to the root of your checkout
+1. Install a virtualenv: ```python3 -m venv .venv```
+1. Activate the virtualenv: ```source .venv/bin/activate``` on MacOS/Linux, or ```.venv\Scripts\activate.bat``` on Windows
+1. Install the python modules needed:  ```pip install -r requirements.txt```
+1.  If you've never used CDK before, run ```cdk bootstrap```
+
+
+# Deploy the stack
+
+```cdk deploy --parameters NotificationEmail=youraddress@example.com```
+
+Make a note of the name of the input and output buckets that were created.
+
+Check your email - SNS will ask you to confirm your email address for the notifications to be sent to. 
+
+# Submitting work to the stack
+
+Use the `aws` CLI or web interface to add files to the OutputBucket :
+
+```echo hello research world | aws s3 cp - s3://InputBucket-nnnnnnnn-mmmmmmmm/helloworld.txt```
+
+Watch the magic happen in the AWS Console, by navigating to AWS Batch and looking at Jobs.
+
+Download your results from the output bucket:
+
+```aws s3 cp s3://OutputBucket-xxxxxxxx-yyyyyyyy/helloworld.txt.out -```
+
 # Before you start
 
 This project is set up like a standard Python project.  You need to create a virtualenv
