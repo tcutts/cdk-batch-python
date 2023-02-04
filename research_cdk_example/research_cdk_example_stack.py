@@ -1,5 +1,9 @@
 from aws_cdk import (
-    Stack, Duration, CfnOutput, CfnParameter, RemovalPolicy,
+    Stack,
+    Duration,
+    CfnOutput,
+    CfnParameter,
+    RemovalPolicy,
     aws_s3 as _s3,
     aws_s3_notifications as _s3n,
     aws_lambda as _lambda,
@@ -13,11 +17,11 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-class ResearchCdkExampleStack(Stack):
 
+class ResearchCdkExampleStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        
+
         # Create a VPC for everything to go in
         vpc = _ec2.Vpc(self, "ResearchVPC")
 
@@ -26,9 +30,10 @@ class ResearchCdkExampleStack(Stack):
 
         # Create an EC2 compute resource
         compute_environment = _batch.ComputeEnvironment(
-            self, "ComputeEnvironment",
+            self,
+            "ComputeEnvironment",
             compute_resources=_batch.ComputeResources(
-                instance_types=[ _ec2.InstanceType("c6a") ],
+                instance_types=[_ec2.InstanceType("c6a")],
                 image=_ecs.EcsOptimizedImage.amazon_linux2(),
                 vpc=vpc,
                 instance_role=instance_profile.attr_arn,
@@ -36,46 +41,54 @@ class ResearchCdkExampleStack(Stack):
         )
 
         # Create a job queue connected to the Compute Environment
-        job_queue = _batch.JobQueue(self, "ResearchQueue",
+        job_queue = _batch.JobQueue(
+            self,
+            "ResearchQueue",
             compute_environments=[
                 _batch.JobQueueComputeEnvironment(
                     compute_environment=compute_environment,
                     order=1,
                 )
-            ]
+            ],
         )
 
         # Create a job definition for the word_count container
-        job_def = _batch.JobDefinition(self, "WordCountJob",
+        job_def = _batch.JobDefinition(
+            self,
+            "WordCountJob",
             container=_batch.JobDefinitionContainer(
-                image=_ecs.ContainerImage.from_asset(
-                    "job_definitions/word_count"
-                ),
+                image=_ecs.ContainerImage.from_asset("job_definitions/word_count"),
                 memory_limit_mib=100,
                 vcpus=1,
                 job_role=job_role,
             ),
             retry_attempts=3,
-            timeout=Duration.days(1) 
+            timeout=Duration.days(1),
         )
 
         # Create input and output buckets. Auto_delete_objects
         # is set to true because this is an example, but is not
-        # advisable in production. 
-        input_bucket = _s3.Bucket(self, "InputBucket",
+        # advisable in production.
+        input_bucket = _s3.Bucket(
+            self,
+            "InputBucket",
             encryption=_s3.BucketEncryption.S3_MANAGED,
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
         )
 
-        output_bucket = _s3.Bucket(self, "OutputBucket",
+        output_bucket = _s3.Bucket(
+            self,
+            "OutputBucket",
             encryption=_s3.BucketEncryption.S3_MANAGED,
             removal_policy=RemovalPolicy.DESTROY,
-            auto_delete_objects=True
+            auto_delete_objects=True,
         )
 
         # Create the lambda function which will respond to files arriving
-        bucket_arrival_function = _lambda.Function(self, "BucketArrival",
+        bucket_arrival_function = _lambda.Function(
+            self,
+            "BucketArrival",
             runtime=_lambda.Runtime.PYTHON_3_9,
             code=_lambda.Code.from_asset("lambda/bucket_arrival"),
             handler="bucket_arrival.handler",
@@ -84,8 +97,8 @@ class ResearchCdkExampleStack(Stack):
             environment={
                 "JOBDEF": job_def.job_definition_name,
                 "JOBQUEUE": job_queue.job_queue_name,
-                "OUTPUT_BUCKET": output_bucket.bucket_name
-            }
+                "OUTPUT_BUCKET": output_bucket.bucket_name,
+            },
         )
 
         # Send object creation notifications from the input bucket
@@ -97,16 +110,14 @@ class ResearchCdkExampleStack(Stack):
         # Allow the lambda function to submit jobs
         bucket_arrival_function.role.attach_inline_policy(
             _iam.Policy(
-                self, "BatchSubmitPolicy",
+                self,
+                "BatchSubmitPolicy",
                 statements=[
                     _iam.PolicyStatement(
                         actions=["batch:SubmitJob"],
-                        resources=[
-                            job_def.job_definition_arn,
-                            job_queue.job_queue_arn
-                        ]
+                        resources=[job_def.job_definition_arn, job_queue.job_queue_arn],
                     )
-                ]
+                ],
             )
         )
 
@@ -117,9 +128,11 @@ class ResearchCdkExampleStack(Stack):
         output_bucket.grant_write(job_role)
 
         # Specify email destination as parameter
-        email = CfnParameter(self, "Notification Email",
+        email = CfnParameter(
+            self,
+            "Notification Email",
             description="Email adress job success/failures will be sent to",
-            allowed_pattern="\w+@(\w+\.)+(\w+)"
+            allowed_pattern="\w+@(\w+\.)+(\w+)",
         )
 
         # Create an SNS topic for notifications
@@ -127,50 +140,51 @@ class ResearchCdkExampleStack(Stack):
 
         if email.value_as_string != "":
             # Subscribe to it
-            _sns.Subscription(self, "NotifyMe",
-                topic=topic, protocol=_sns.SubscriptionProtocol.EMAIL,
+            _sns.Subscription(
+                self,
+                "NotifyMe",
+                topic=topic,
+                protocol=_sns.SubscriptionProtocol.EMAIL,
                 endpoint=email.value_as_string,
             )
 
         # EventBridge between Batch and topic, for success and failure
-        _events.Rule(self, "BatchEvents",
+        _events.Rule(
+            self,
+            "BatchEvents",
             event_pattern=_events.EventPattern(
                 source=["aws.batch"],
                 detail_type=["Batch Job State Change"],
-                detail={
-                    "status": _events.Match.any_of(["SUCCEEDED", "FAILED"])
-                }
+                detail={"status": _events.Match.any_of(["SUCCEEDED", "FAILED"])},
             ),
-            targets=[ _targets.SnsTopic(topic) ]
+            targets=[_targets.SnsTopic(topic)],
         )
 
         # Print out the bucket names
         CfnOutput(self, "InputBucketName", value=input_bucket.bucket_name)
         CfnOutput(self, "OutputBucketName", value=output_bucket.bucket_name)
-        CfnOutput(self, "QueueName", value=job_queue.job_queue_name) 
+        CfnOutput(self, "QueueName", value=job_queue.job_queue_name)
 
     def create_roles(self) -> tuple[_iam.CfnInstanceProfile, _iam.Role]:
         # Create a role for jobs to assume as they run
-        job_role = _iam.Role(self, "JobRole",
+        job_role = _iam.Role(
+            self,
+            "JobRole",
             assumed_by=_iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
         )
 
         # Instance role for the EC2 instances which get created
-        instance_role = _iam.Role(self, "InstanceRole",
+        instance_role = _iam.Role(
+            self,
+            "InstanceRole",
             assumed_by=_iam.ServicePrincipal("ec2.amazonaws.com"),
-            managed_policies= [
-                _iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "service-role/AmazonEC2ContainerServiceforEC2Role"
-                )
+            managed_policies=[
+                _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AmazonEC2ContainerServiceforEC2Role")
             ],
         )
 
         instance_role.add_to_policy(
-            _iam.PolicyStatement(
-                effect=_iam.Effect.ALLOW,
-                actions=["sts:AssumeRole"],
-                resources=["*"]
-            )
+            _iam.PolicyStatement(effect=_iam.Effect.ALLOW, actions=["sts:AssumeRole"], resources=["*"])
         )
 
         instance_role.add_to_policy(
@@ -182,13 +196,10 @@ class ResearchCdkExampleStack(Stack):
                     "logs:PutLogEvents",
                     "logs:DescribeLogStreams",
                 ],
-                resources=["arn:aws:logs:*:*:*"]
+                resources=["arn:aws:logs:*:*:*"],
             )
         )
 
-        instance_profile = _iam.CfnInstanceProfile(
-            self, "InstanceProfile",
-            roles=[instance_role.role_name]
-        )
+        instance_profile = _iam.CfnInstanceProfile(self, "InstanceProfile", roles=[instance_role.role_name])
 
         return (instance_profile, job_role)
