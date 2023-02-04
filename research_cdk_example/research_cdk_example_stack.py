@@ -1,5 +1,5 @@
 from aws_cdk import (
-    Stack, Duration, CfnOutput, CfnParameter,
+    Stack, Duration, CfnOutput, CfnParameter, RemovalPolicy,
     aws_s3 as _s3,
     aws_s3_notifications as _s3n,
     aws_lambda as _lambda,
@@ -59,13 +59,19 @@ class ResearchCdkExampleStack(Stack):
             timeout=Duration.days(1) 
         )
 
-        # Create input and output buckets
+        # Create input and output buckets. Auto_delete_objects
+        # is set to true because this is an example, but is not
+        # advisable in production. 
         input_bucket = _s3.Bucket(self, "InputBucket",
-            encryption=_s3.BucketEncryption.S3_MANAGED
+            encryption=_s3.BucketEncryption.S3_MANAGED,
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
         )
 
         output_bucket = _s3.Bucket(self, "OutputBucket",
-            encryption=_s3.BucketEncryption.S3_MANAGED
+            encryption=_s3.BucketEncryption.S3_MANAGED,
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True
         )
 
         # Create the lambda function which will respond to files arriving
@@ -141,8 +147,9 @@ class ResearchCdkExampleStack(Stack):
         # Print out the bucket names
         CfnOutput(self, "InputBucketName", value=input_bucket.bucket_name)
         CfnOutput(self, "OutputBucketName", value=output_bucket.bucket_name)
+        CfnOutput(self, "QueueName", value=job_queue.job_queue_name) 
 
-    def create_roles(self) -> Tuple[_iam.CfnInstanceProfile, _iam.Role]:
+    def create_roles(self) -> tuple[_iam.CfnInstanceProfile, _iam.Role]:
         # Create a role for jobs to assume as they run
         job_role = _iam.Role(self, "JobRole",
             assumed_by=_iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
