@@ -22,7 +22,7 @@ class ResearchCdkExampleStack(Stack):
         vpc = _ec2.Vpc(self, "ResearchVPC")
 
         # Create the roles we need
-        self.create_roles()
+        instance_profile, job_role = self.create_roles()
 
         # Create an EC2 compute resource
         compute_environment = _batch.ComputeEnvironment(
@@ -31,7 +31,7 @@ class ResearchCdkExampleStack(Stack):
                 instance_types=[ _ec2.InstanceType("c6a") ],
                 image=_ecs.EcsOptimizedImage.amazon_linux2(),
                 vpc=vpc,
-                instance_role=self.instance_profile.attr_arn
+                instance_role=instance_profile.attr_arn,
             ),
         )
 
@@ -53,7 +53,7 @@ class ResearchCdkExampleStack(Stack):
                 ),
                 memory_limit_mib=100,
                 vcpus=1,
-                job_role=self.job_role,
+                job_role=job_role,
             ),
             retry_attempts=3,
             timeout=Duration.days(1) 
@@ -73,7 +73,7 @@ class ResearchCdkExampleStack(Stack):
             runtime=_lambda.Runtime.PYTHON_3_9,
             code=_lambda.Code.from_asset("lambda/bucket_arrival"),
             handler="bucket_arrival.handler",
-            # Environment variables tell the lambda where to submit jobs to
+            # Environment variables tell the lambda where to submit jobs
             # and place output
             environment={
                 "JOBDEF": job_def.job_definition_name,
@@ -107,8 +107,8 @@ class ResearchCdkExampleStack(Stack):
         # Give the lambda and job_role the permissions they need on
         # the S3 buckets
         input_bucket.grant_read(bucket_arrival_function)
-        input_bucket.grant_read(self.job_role)
-        output_bucket.grant_write(self.job_role)
+        input_bucket.grant_read(job_role)
+        output_bucket.grant_write(job_role)
 
         # Specify email destination as parameter
         email = CfnParameter(self, "Notification Email",
@@ -142,9 +142,9 @@ class ResearchCdkExampleStack(Stack):
         CfnOutput(self, "InputBucketName", value=input_bucket.bucket_name)
         CfnOutput(self, "OutputBucketName", value=output_bucket.bucket_name)
 
-    def create_roles(self):
+    def create_roles(self) -> Tuple[_iam.CfnInstanceProfile, _iam.Role]:
         # Create a role for jobs to assume as they run
-        self.job_role = _iam.Role(self, "JobRole",
+        job_role = _iam.Role(self, "JobRole",
             assumed_by=_iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
         )
 
@@ -179,7 +179,9 @@ class ResearchCdkExampleStack(Stack):
             )
         )
 
-        self.instance_profile = _iam.CfnInstanceProfile(
+        instance_profile = _iam.CfnInstanceProfile(
             self, "InstanceProfile",
             roles=[instance_role.role_name]
         )
+
+        return (instance_profile, job_role)
