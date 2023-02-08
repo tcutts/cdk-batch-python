@@ -4,19 +4,19 @@
 Science depends on the reproducibility of results.  This includes the reproducibility of analysis.
 
 Historically, a lot of researchers struggled to run each other's code; developed on an individual
-specific system, and requiring work to run elsewhere.
+specific system, and requiring difficult porting work to run elsewhere.
 
 Containers help solve a lot of this problem by at least packaging an application and a lot of its
 dependencies in a single runnable module.  But that's only part of the story.  What about everything
 else you need to run a scientific analysis at scale?  Batch queues.  HPC nodes.  High performance
 networks.  Firewalls.  Centralised logging.  Fault notifications.  The list goes on...
 
-AWS of course has all of these features and more, but configuring them all individually through the AWS console is laborious and error prone.
+AWS of course has all of these features and more, but configuring them all individually through the AWS console can be laborious and error prone.
 
 AWS CloudFormation is a service allows you to describe all of
 your infrastratucture in template files, in either YAML or JSON.  The service then turns these templates into a series of API calls and executes them to created the infrastructure.
 
-However, CloudFormation templates can be unwieldy to
+However, CloudFormation templates still require you to specify many details and can become unwieldy to
 write and debug, especially as your stack gets more complex and has many cross-references between resources.
 
 What if you could write code in Python, or other languages with which you are
