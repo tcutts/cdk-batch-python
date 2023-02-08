@@ -1,4 +1,4 @@
-aws-cdk-lib==2.62.2
+aws-cdk-lib==2.63.2
 boto3
-aws-cdk.aws-batch-alpha==2.62.2a0
+aws-cdk.aws-batch-alpha==2.63.2a0
 constructs>=10.0.0,<11.0.0
