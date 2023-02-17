@@ -55,11 +55,12 @@ class ResearchCdkExampleStack(Stack):
         # Create a job definition for the word_count container
         job_def = _batch.JobDefinition(
             self,
-            "WordCountJob",
+            "CRAM2FastQ",
             container=_batch.JobDefinitionContainer(
-                image=_ecs.ContainerImage.from_asset("job_definitions/word_count"),
-                memory_limit_mib=100,
-                vcpus=1,
+                image=_ecs.ContainerImage.from_asset("job_definitions/samtools"),
+                command=[ "/usr/local/bin/cram2fastq.sh" ],
+                memory_limit_mib=4000,
+                vcpus=8,
                 job_role=job_role,
             ),
             retry_attempts=3,
@@ -105,6 +106,7 @@ class ResearchCdkExampleStack(Stack):
         # to the lambda function
         input_bucket.add_object_created_notification(
             _s3n.LambdaDestination(bucket_arrival_function),
+            _s3.NotificationKeyFilter(suffix='.cram')
         )
 
         # Allow the lambda function to submit jobs

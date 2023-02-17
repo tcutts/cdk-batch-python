@@ -9,5 +9,6 @@ RUN make
 RUN make install
 
 FROM --platform=linux/amd64 amazonlinux:latest
-RUN yum -y install xz-libs bzip2 zlib openssl-libs
+RUN yum -y install xz-libs bzip2 zlib openssl-libs aws-cli
 COPY --from=build /usr/local/samtools /usr/local
+ADD cram2fastq.sh /usr/local/bin
