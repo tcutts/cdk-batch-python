@@ -17,3 +17,6 @@ def test_resources_created():
     template.has_resource_properties("AWS::SNS::Subscription", {"Protocol": "email"})
 
     template.has_resource_properties("AWS::Batch::JobDefinition", {"Type": "container"})
+
+    template.resource_count_is("AWS::Batch::JobQueue", 1)
+    template.resource_count_is("AWS::Batch::ComputeEnvironment", 1)
