@@ -14,6 +14,7 @@ from aws_cdk import (
     aws_sns as _sns,
     aws_events as _events,
     aws_events_targets as _targets,
+    aws_budgets as _budgets,
 )
 from constructs import Construct
 
@@ -159,6 +160,33 @@ class ResearchCdkExampleStack(Stack):
             ),
             targets=[_targets.SnsTopic(topic)],
         )
+
+        budgetlimit = CfnParameter(self, "BudgetLimit", default=1000, min_value=0, type="Number")
+
+        budget = _budgets.CfnBudget(self, f"{self.stack_name}Budget",
+            budget=_budgets.CfnBudget.BudgetDataProperty(
+                budget_type="COST",
+                time_unit="MONTHLY",
+                budget_limit=_budgets.CfnBudget.SpendProperty(
+                    amount=budgetlimit.value_as_number,
+                    unit="USD"
+                ),
+                cost_filters={
+                    "TagKeyValue": [ f"aws:cloudformation:stack-id${self.stack_id}" ]
+                }
+            ),
+            notifications_with_subscribers=[_budgets.CfnBudget.NotificationWithSubscribersProperty(
+                notification=_budgets.CfnBudget.NotificationProperty(
+                    comparison_operator="GREATER_THAN",
+                    notification_type="FORECASTED",
+                    threshold=100
+                ),
+                subscribers=[_budgets.CfnBudget.SubscriberProperty(
+                    subscription_type="EMAIL",
+                    address=email.value_as_string
+                )]
+            )],
+        )           
 
         # Print out the bucket names
         CfnOutput(self, "InputBucketName", value=input_bucket.bucket_name)

@@ -36,6 +36,7 @@ This is an example of a simple research-oriented architecture, written almost en
 3. CDK uses docker on your machine to build and upload the container to the Amazon Elastic Container registry.  AWS Batch uses this container to process the file in the input bucket.
 1. The results of the job are then stored in  `Output Bucket`
 1. An `Event Bus` watches the AWS Batch events, and filters them for job status changes to `SUCCEEDED` or `FAILED` and sends these events to the `JobCompletion` SNS topic.
+1. Creates a budget which warns you if your spend goes over an amount you specify
 
 
 # Prerequisites
@@ -51,6 +52,7 @@ This is an example of a simple research-oriented architecture, written almost en
 1. Activate the virtualenv: ```source .venv/bin/activate``` on MacOS/Linux, or ```.venv\Scripts\activate.bat``` on Windows
 1. Install the python modules needed:  ```pip install -r requirements.txt```
 1.  If you've never used CDK before, run ```cdk bootstrap```
+1.  In order for the budget to work correctly, you need to have access to your billing information, and [activate the cost allocation tag](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/activate-built-in-tags.html) `aws:cloudformation:stack-id` .  Note this can take up to 24 hours to take effect, and resources created before the activation will not be counted in the budget.
 
 
 # Deploy the stack

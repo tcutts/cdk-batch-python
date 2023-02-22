@@ -20,3 +20,4 @@ def test_resources_created():
 
     template.resource_count_is("AWS::Batch::JobQueue", 1)
     template.resource_count_is("AWS::Batch::ComputeEnvironment", 1)
+    template.resource_count_is("AWS::Budgets::Budget", 1)
