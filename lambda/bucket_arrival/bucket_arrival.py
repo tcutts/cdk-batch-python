@@ -5,7 +5,6 @@ import pprint
 
 batch = boto3.client("batch")
 
-
 def handler(event, context):
     obj_key = event["Records"][0]["s3"]["object"]["key"]
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
