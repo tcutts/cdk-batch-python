@@ -36,7 +36,7 @@ This is an example of a simple research-oriented architecture, written almost en
 3. CDK uses docker on your machine to build and upload the container to the Amazon Elastic Container registry.  AWS Batch uses this container to process the file in the input bucket.
 1. The results of the job are then stored in  `Output Bucket`
 1. An `Event Bus` watches the AWS Batch events, and filters them for job status changes to `SUCCEEDED` or `FAILED` and sends these events to the `JobCompletion` SNS topic.
-1. Creates a budget which warns you if your spend goes over an amount you specify
+1. Creates a budget which warns you if your spend goes over an amount you specify, and inactivates the queue so no more work can be submitted.
 
 
 # Prerequisites
@@ -67,13 +67,13 @@ Check your email - SNS will ask you to confirm your email address for the notifi
 
 Use the `aws` CLI or web interface to add files to the OutputBucket :
 
-```echo hello research world | aws s3 cp - s3://InputBucket-nnnnnnnn-mmmmmmmm/helloworld.txt```
+```echo hello research world | aws s3 cp - s3://researchcdkexamplestack-inputbucketnnnnnnnn-mmmmmmmm/helloworld.txt```
 
 Watch the magic happen in the AWS Console, by navigating to AWS Batch and looking at Jobs.
 
 Download your results from the output bucket:
 
-```aws s3 cp s3://OutputBucket-xxxxxxxx-yyyyyyyy/helloworld.txt.out -```
+```aws s3 cp s3://researchcdkexamplestackxxxxxxxx-yyyyyyyy/helloworld.txt.out -```
 
 # Before you start
 
