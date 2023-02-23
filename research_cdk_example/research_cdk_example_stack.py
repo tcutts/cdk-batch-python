@@ -124,7 +124,6 @@ class ResearchCdkExampleStack(Stack):
 
         # Give the lambda and job_role the permissions they need on
         # the S3 buckets
-        input_bucket.grant_read(bucket_arrival_function)
         input_bucket.grant_read(job_role)
         output_bucket.grant_write(job_role)
 
