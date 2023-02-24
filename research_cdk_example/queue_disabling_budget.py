@@ -24,6 +24,18 @@ class QueueDisablingBudget(Construct):
         # Create an SNS topic for budget alerts to go to
         self.budget_topic = _sns.Topic(self, "BudgetTopic")
 
+        accountid=scope.account
+        
+        # Allow Budgets to send to the topic
+        self.budget_topic.grant_publish(_iam.ServicePrincipal("budgets.amazonaws.com", conditions={
+            "StringEquals": {
+                "aws:PrincipalAccount": accountid
+            },
+            "ArnLike": {
+                "aws:SourceArn": f"arn:aws:budgets::{accountid}:*"
+            }
+        }))
+
         # Create the budget itself
         _budgets.CfnBudget(
             self,
