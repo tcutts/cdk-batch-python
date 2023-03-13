@@ -69,12 +69,14 @@ entirely in Python, to illustrate the principles.
 
 ## Deploy the stack
 
-```cdk deploy --parameters NotificationEmail=youraddress@example.com```
+```bash
+cdk deploy --parameters NotificationEmail=youraddress@example.com --parameters BudgetLimit=100
+```
 
 Make a note of the name of the input and output buckets that were created.
 
 Check your email - SNS will ask you to confirm your email address for the
-notifications to be sent to.
+notifications to be sent to, if you have never had emails from SES before.
 
 ## Submitting work to the stack
 
