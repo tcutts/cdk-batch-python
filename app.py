@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
-import os
-
 import aws_cdk as cdk
 
 from research_cdk_example.research_cdk_example_stack import ResearchCdkExampleStack
-
 
 app = cdk.App()
 ResearchCdkExampleStack(app, "ResearchCdkExampleStack",
