@@ -2,6 +2,7 @@ from constructs import Construct
 from aws_cdk import (
     CfnParameter,
     CfnOutput,
+    Stack,
     aws_budgets as _budgets,
     aws_lambda as _lambda,
     aws_batch_alpha as _batch,
@@ -16,18 +17,18 @@ from aws_cdk import (
 
 
 class QueueDisablingBudget(Construct):
-    def __init__(self, scope: Construct, id: str, email: str, **kwargs):
+    def __init__(self, scope: Construct, id: str, email: str, cost_tag: str, **kwargs):
         super().__init__(scope, id, **kwargs)
 
         budgetlimit = CfnParameter(self, "BudgetLimit", default=5, min_value=0, type="Number")
         budgetlimit.override_logical_id("BudgetLimit")
-
+ 
         # Create an SNS topic for budget alerts to go to
         self.budget_topic = _sns.Topic(self, "BudgetTopic")
 
-        accountid = scope.account
-
         # Allow Budgets to send to the topic
+        stack = Stack.of(self)
+        accountid = stack.account
         self.budget_topic.grant_publish(
             _iam.ServicePrincipal(
                 "budgets.amazonaws.com",
@@ -43,11 +44,12 @@ class QueueDisablingBudget(Construct):
             self,
             "Budget",
             budget=_budgets.CfnBudget.BudgetDataProperty(
+                budget_name=f"{stack.stack_name}Budget",
                 budget_type="COST",
                 time_unit="MONTHLY",
                 budget_limit=_budgets.CfnBudget.SpendProperty(amount=budgetlimit.value_as_number, unit="USD"),
                 # The budget only applies to this stack:
-                cost_filters={"TagKeyValue": [f"aws:cloudformation:stack-id${scope.stack_id}"]},
+                cost_filters={"TagKeyValue": [f"{cost_tag}${stack.node.addr}"]},
             ),
             notifications_with_subscribers=[
                 _budgets.CfnBudget.NotificationWithSubscribersProperty(

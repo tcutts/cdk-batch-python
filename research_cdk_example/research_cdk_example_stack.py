@@ -3,7 +3,7 @@ from aws_cdk import (
     Duration,
     CfnOutput,
     CfnParameter,
-    RemovalPolicy,
+    RemovalPolicy, Tags,
     aws_s3 as _s3,
     aws_s3_notifications as _s3n,
     aws_lambda as _lambda,
@@ -18,6 +18,7 @@ from aws_cdk import (
 from constructs import Construct
 from .queue_disabling_budget import QueueDisablingBudget
 
+COST_TAG="research-stack-id"
 
 class ResearchCdkExampleStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
@@ -38,6 +39,10 @@ class ResearchCdkExampleStack(Stack):
                 image=_ecs.EcsOptimizedImage.amazon_linux2(),
                 vpc=vpc,
                 instance_role=instance_profile.attr_arn,
+                minv_cpus=8,
+                compute_resources_tags={
+                    COST_TAG: self.node.addr
+                }
             ),
         )
 
@@ -160,8 +165,12 @@ class ResearchCdkExampleStack(Stack):
             targets=[_targets.SnsTopic(topic)],
         )
 
-        budget = QueueDisablingBudget(self, "StackBudget", email=email.value_as_string)
+        budget = QueueDisablingBudget(
+            self, "StackBudget", email=email.value_as_string, cost_tag=COST_TAG
+        )
         budget.disable_jobqueue_on_alert(job_queue)
+
+        Tags.of(self).add(key=COST_TAG, value=self.node.addr)
 
         # Print out the bucket names
         CfnOutput(self, "InputBucketName", value=input_bucket.bucket_name)
