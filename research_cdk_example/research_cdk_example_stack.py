@@ -39,7 +39,9 @@ class ResearchCdkExampleStack(Stack):
                 image=_ecs.EcsOptimizedImage.amazon_linux2(),
                 vpc=vpc,
                 instance_role=instance_profile.attr_arn,
-                minv_cpus=8,
+                # Good practice to set a maximum on the number of CPUs, to avoid
+                # costly accidents
+                maxv_cpus=256,
                 compute_resources_tags={
                     COST_TAG: self.node.addr
                 }

@@ -49,7 +49,7 @@ class QueueDisablingBudget(Construct):
                 time_unit="MONTHLY",
                 budget_limit=_budgets.CfnBudget.SpendProperty(amount=budgetlimit.value_as_number, unit="USD"),
                 # The budget only applies to this stack:
-                cost_filters={"TagKeyValue": [f"{cost_tag}${stack.node.addr}"]},
+                cost_filters={"TagKeyValue": [f"user:{cost_tag}${stack.node.addr}"]},
             ),
             notifications_with_subscribers=[
                 _budgets.CfnBudget.NotificationWithSubscribersProperty(
