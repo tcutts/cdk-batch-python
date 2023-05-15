@@ -65,7 +65,7 @@ entirely in Python, to illustrate the principles.
 1. Activate the virtualenv: ```source .venv/bin/activate``` on MacOS/Linux, or ```.venv\Scripts\activate.bat``` on Windows
 1. Install the python modules needed:  ```pip install -r requirements.txt```
 1. If you've never used CDK before, run ```cdk bootstrap```
-1. In order for the budget to work correctly, you need to have access to your billing information, and [activate the cost allocation tag](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/activate-built-in-tags.html) `aws:cloudformation:stack-id` .  Note this can take up to 24 hours to take effect, and resources created before the activation will not be counted in the budget.
+1. In order for the budget to work correctly, you need to have access to your billing information, and [activate the cost allocation tag](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/activate-built-in-tags.html) `research-stack-id` .  Note this can take up to 24 hours to take effect, and resources created before the activation will not be counted in the budget.
 
 ## Deploy the stack
 
