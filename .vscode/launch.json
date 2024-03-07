@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "CDK Synth",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "app.py",
             "console": "integratedTerminal"
