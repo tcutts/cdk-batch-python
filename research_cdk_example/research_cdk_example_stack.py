@@ -30,9 +30,6 @@ class ResearchCdkExampleStack(Stack):
             max_azs=1
         )
 
-        # Create the roles we need
-        job_role = self.create_roles()
-
         # Create an EC2 compute resource
         compute_environment = _batch.ManagedEc2EcsComputeEnvironment(
             self,
@@ -45,15 +42,16 @@ class ResearchCdkExampleStack(Stack):
                                          apply_to_launched_instances=True)
 
         # Create a job queue connected to the Compute Environment
-        job_queue = _batch.JobQueue(
+        job_queue = _batch.JobQueue(self, "ResearchQueue")
+        job_queue.add_compute_environment(compute_environment=compute_environment,
+                                          order=1)
+
+        # Create a role for jobs to assume as they run; this role will be needed
+        # to access the input and output buckets
+        job_role = _iam.Role(
             self,
-            "ResearchQueue",
-            compute_environments=[
-                _batch.OrderedComputeEnvironment(
-                    compute_environment=compute_environment,
-                    order=1,
-                )
-            ],
+            "JobRole",
+            assumed_by=_iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
         )
 
         # Create a job definition for the word_count container
@@ -62,7 +60,7 @@ class ResearchCdkExampleStack(Stack):
             "WordCountJob",
             container=_batch.EcsEc2ContainerDefinition(self, "ContainerDefinition",
                 image=_ecs.ContainerImage.from_asset("job_definitions/word_count"),
-                memory=Size.mebibytes(100),
+                memory=Size.mebibytes(1000),
                 cpu=1,
                 job_role=job_role,
             ),
@@ -99,7 +97,7 @@ class ResearchCdkExampleStack(Stack):
             # Environment variables tell the lambda where to submit jobs
             # and place output
             environment={
-                "JOBDEF": job_def.job_definition_name,
+                "JOBDEF": job_def.job_definition_arn,
                 "JOBQUEUE": job_queue.job_queue_name,
                 "OUTPUT_BUCKET": output_bucket.bucket_name,
             },
@@ -163,13 +161,3 @@ class ResearchCdkExampleStack(Stack):
         CfnOutput(self, "InputBucketName", value=input_bucket.bucket_name)
         CfnOutput(self, "OutputBucketName", value=output_bucket.bucket_name)
         CfnOutput(self, "QueueName", value=job_queue.job_queue_name)
-
-    def create_roles(self) -> tuple[_iam.Role]:
-        # Create a role for jobs to assume as they run
-        job_role = _iam.Role(
-            self,
-            "JobRole",
-            assumed_by=_iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
-        )
-
-        return (job_role)
