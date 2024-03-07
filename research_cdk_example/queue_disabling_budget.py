@@ -5,7 +5,7 @@ from aws_cdk import (
     Stack,
     aws_budgets as _budgets,
     aws_lambda as _lambda,
-    aws_batch_alpha as _batch,
+    aws_batch as _batch,
     aws_sns as _sns,
     aws_lambda_event_sources as _les,
     aws_iam as _iam,

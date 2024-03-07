@@ -1,5 +1,6 @@
 from aws_cdk import (
     Stack,
+    Size,
     Duration,
     CfnOutput,
     CfnParameter,
@@ -7,7 +8,7 @@ from aws_cdk import (
     aws_s3 as _s3,
     aws_s3_notifications as _s3n,
     aws_lambda as _lambda,
-    aws_batch_alpha as _batch,
+    aws_batch as _batch,
     aws_ec2 as _ec2,
     aws_ecs as _ecs,
     aws_iam as _iam,
@@ -30,32 +31,25 @@ class ResearchCdkExampleStack(Stack):
         )
 
         # Create the roles we need
-        instance_profile, job_role = self.create_roles()
+        job_role = self.create_roles()
 
         # Create an EC2 compute resource
-        compute_environment = _batch.ComputeEnvironment(
+        compute_environment = _batch.ManagedEc2EcsComputeEnvironment(
             self,
             "ComputeEnvironment",
-            compute_resources=_batch.ComputeResources(
-                instance_types=[_ec2.InstanceType("c6a")],
-                image=_ecs.EcsOptimizedImage.amazon_linux2(),
-                vpc=vpc,
-                instance_role=instance_profile.attr_arn,
-                # Good practice to set a maximum on the number of CPUs, to avoid
-                # costly accidents
-                maxv_cpus=256,
-                compute_resources_tags={
-                    COST_TAG: self.node.addr
-                }
-            ),
+            vpc=vpc,
+            instance_classes=[_ec2.InstanceClass.C6A],
         )
+
+        compute_environment.tags.set_tag(key=COST_TAG, value=self.node.addr,
+                                         apply_to_launched_instances=True)
 
         # Create a job queue connected to the Compute Environment
         job_queue = _batch.JobQueue(
             self,
             "ResearchQueue",
             compute_environments=[
-                _batch.JobQueueComputeEnvironment(
+                _batch.OrderedComputeEnvironment(
                     compute_environment=compute_environment,
                     order=1,
                 )
@@ -63,13 +57,13 @@ class ResearchCdkExampleStack(Stack):
         )
 
         # Create a job definition for the word_count container
-        job_def = _batch.JobDefinition(
+        job_def = _batch.EcsJobDefinition(
             self,
             "WordCountJob",
-            container=_batch.JobDefinitionContainer(
+            container=_batch.EcsEc2ContainerDefinition(self, "ContainerDefinition",
                 image=_ecs.ContainerImage.from_asset("job_definitions/word_count"),
-                memory_limit_mib=100,
-                vcpus=1,
+                memory=Size.mebibytes(100),
+                cpu=1,
                 job_role=job_role,
             ),
             retry_attempts=3,
@@ -117,19 +111,8 @@ class ResearchCdkExampleStack(Stack):
             _s3n.LambdaDestination(bucket_arrival_function),
         )
 
-        # Allow the lambda function to submit jobs
-        bucket_arrival_function.role.attach_inline_policy(
-            _iam.Policy(
-                self,
-                "BatchSubmitPolicy",
-                statements=[
-                    _iam.PolicyStatement(
-                        actions=["batch:SubmitJob"],
-                        resources=[job_def.job_definition_arn, job_queue.job_queue_arn],
-                    )
-                ],
-            )
-        )
+        # Allow lambda function to submit jobs
+        job_def.grant_submit_job(bucket_arrival_function, job_queue)
 
         # Give the lambda and job_role the permissions they need on
         # the S3 buckets
@@ -141,7 +124,7 @@ class ResearchCdkExampleStack(Stack):
             self,
             "Notification Email",
             description="Email adress job success/failures will be sent to",
-            allowed_pattern="\w+@(\w+\.)+(\w+)",
+            allowed_pattern="\w+(\w+\.)*\w*@(\w+\.)+(\w+)",
         )
 
         # Create an SNS topic for notifications
@@ -181,7 +164,7 @@ class ResearchCdkExampleStack(Stack):
         CfnOutput(self, "OutputBucketName", value=output_bucket.bucket_name)
         CfnOutput(self, "QueueName", value=job_queue.job_queue_name)
 
-    def create_roles(self) -> tuple[_iam.CfnInstanceProfile, _iam.Role]:
+    def create_roles(self) -> tuple[_iam.Role]:
         # Create a role for jobs to assume as they run
         job_role = _iam.Role(
             self,
@@ -189,33 +172,4 @@ class ResearchCdkExampleStack(Stack):
             assumed_by=_iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
         )
 
-        # Instance role for the EC2 instances which get created
-        instance_role = _iam.Role(
-            self,
-            "InstanceRole",
-            assumed_by=_iam.ServicePrincipal("ec2.amazonaws.com"),
-            managed_policies=[
-                _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AmazonEC2ContainerServiceforEC2Role")
-            ],
-        )
-
-        instance_role.add_to_policy(
-            _iam.PolicyStatement(effect=_iam.Effect.ALLOW, actions=["sts:AssumeRole"], resources=["*"])
-        )
-
-        instance_role.add_to_policy(
-            _iam.PolicyStatement(
-                effect=_iam.Effect.ALLOW,
-                actions=[
-                    "logs:CreateLogGroup",
-                    "logs:CreateLogStream",
-                    "logs:PutLogEvents",
-                    "logs:DescribeLogStreams",
-                ],
-                resources=["arn:aws:logs:*:*:*"],
-            )
-        )
-
-        instance_profile = _iam.CfnInstanceProfile(self, "InstanceProfile", roles=[instance_role.role_name])
-
-        return (instance_profile, job_role)
+        return (job_role)
