@@ -25,7 +25,9 @@ class ResearchCdkExampleStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # Create a VPC for everything to go in
-        vpc = _ec2.Vpc(self, "ResearchVPC")
+        vpc = _ec2.Vpc(self, "ResearchVPC", 
+            max_azs=1
+        )
 
         # Create the roles we need
         instance_profile, job_role = self.create_roles()
